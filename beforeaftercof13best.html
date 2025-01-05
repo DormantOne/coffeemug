@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Mug Memory Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #1a1a1a;
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .instructions-container {
+            max-width: 300px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .instructions-button {
+            background: #2a2a2a;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            text-align: left;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .instructions-button:after {
+                content: '-';
+                font-size: 12px;
+                transition: transform 0.3s;
+            }
+
+            .instructions-button.collapsed:after {
+                transform: rotate(-90deg);
+            }
+
+        .instructions {
+            background: #2a2a2a;
+            border-radius: 0 0 10px 10px;
+            font-size: 14px;
+            line-height: 1.4;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease-out;
+            opacity: 0;
+            padding: 0;
+        }
+
+            .instructions.expanded {
+                max-height: 200px;
+                opacity: 1;
+                padding: 15px;
+            }
+
+            .instructions p {
+                margin: 5px 0;
+            }
+
+        .coffee-state {
+            background: #2a2a2a;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+            .coffee-state button {
+                background: none;
+                border: none;
+                color: #888;
+                font-size: 24px;
+                padding: 5px 15px;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+
+                .coffee-state button.active {
+                    color: #fff;
+                    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+                }
+
+        .game-area {
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .number-boxes, .input-boxes {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            min-height: 60px;
+        }
+
+        .number-box, .input-box {
+            width: 50px;
+            height: 50px;
+            background: #2a2a2a;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            transition: all 0.3s;
+        }
+
+        .number-box {
+            border: 2px solid #4CAF50;
+            color: #4CAF50;
+        }
+
+        .input-box {
+            border: 2px solid #2196F3;
+            color: #2196F3;
+        }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            width: 100%;
+            margin: 20px auto;
+        }
+
+            .numpad button {
+                background: #333;
+                border: none;
+                color: white;
+                padding: 20px;
+                font-size: 24px;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: background-color 0.3s;
+                touch-action: manipulation;
+            }
+
+                .numpad button:active {
+                    background: #444;
+                    transform: scale(0.95);
+                }
+
+        #startButton {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            #startButton:active {
+                transform: scale(0.95);
+            }
+
+        .stats-panel {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-width: 300px;
+            width: 100%;
+            display: none;
+        }
+
+            .stats-panel.visible {
+                display: block;
+            }
+
+        .toggle-stats {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .score-flash {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(76, 175, 80, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .difficulty {
+            color: #888;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            color: #ddd;
+        }
+
+        td {
+            padding: 5px;
+            border-bottom: 1px solid #444;
+        }
+
+        strong {
+            color: #fff;
+            display: block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions-container">
+        <button class="instructions-button" onclick="toggleInstructions()">
+            How to Play
+        </button>
+        <div class="instructions">
+            <p>1. Numbers will appear in boxes one at a time</p>
+            <p>2. Memorize them in order</p>
+            <p>3. Enter them in reverse order</p>
+            <p>4. Game gets harder as you succeed!</p>
+        </div>
+    </div>
+
+    <div class="coffee-state">
+        <button id="beforeCoffee" class="active">Before Coffee</button>
+        <button id="afterCoffee">After Coffee</button>
+    </div>
+
+    <div class="game-area">
+        <div class="number-boxes" id="numberBoxes">
+            <button onclick="startGame()" id="startButton">Start</button>
+        </div>
+        <div class="input-boxes" id="inputBoxes"></div>
+    </div>
+
+    <div class="numpad">
+        <button onclick="addDigit('1')">1</button>
+        <button onclick="addDigit('2')">2</button>
+        <button onclick="addDigit('3')">3</button>
+        <button onclick="addDigit('4')">4</button>
+        <button onclick="addDigit('5')">5</button>
+        <button onclick="addDigit('6')">6</button>
+        <button onclick="addDigit('7')">7</button>
+        <button onclick="addDigit('8')">8</button>
+        <button onclick="addDigit('9')">9</button>
+        <button onclick="clearInput()">C</button>
+        <button onclick="addDigit('0')">0</button>
+        <button onclick="backspace()"><</button>
+    </div>
+
+    <button onclick="toggleStats()" class="toggle-stats">Toggle Stats</button>
+
+    <div class="difficulty">
+        Level: <span id="levelDisplay">3</span> digits
+    </div>
+
+    <div class="stats-panel" id="statsPanel">
+        <h3>Statistics</h3>
+        <div id="detailedStats"></div>
+    </div>
+
+    <div class="score-flash" id="scoreFlash"></div>
+
+    <script>
+        let level = 3;
+        let originalNumber = "";
+        let userInput = "";
+        let startTime = 0;
+        let isCoffeeState = false;
+        let gameHistory = {
+            before: [],
+            after: []
+        };
+
+        // Load game history
+        if (localStorage.getItem('gameHistory')) {
+            gameHistory = JSON.parse(localStorage.getItem('gameHistory'));
+        }
+
+        function generateUniqueNumber(length) {
+            const digits = [...Array(10).keys()];
+            let number = "";
+            for (let i = 0; i < length; i++) {
+                const randIndex = Math.floor(Math.random() * digits.length);
+                number += digits.splice(randIndex, 1);
+            }
+            return number;
+        }
+
+        function createBoxes(count, container, isInput = false) {
+            const parentDiv = document.getElementById(container);
+            parentDiv.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const box = document.createElement('div');
+                box.className = isInput ? 'input-box' : 'number-box';
+                parentDiv.appendChild(box);
+            }
+        }
+
+        function addDigit(digit) {
+            if (userInput.length < level) {
+                userInput += digit;
+                updateInputBoxes();
+                if (userInput.length === level) {
+                    setTimeout(checkAnswer, 500);
+                }
+            }
+        }
+
+        function updateInputBoxes() {
+            const boxes = document.querySelectorAll('.input-box');
+            boxes.forEach((box, i) => {
+                box.textContent = userInput[i] || '';
+            });
+        }
+
+        function clearInput() {
+            userInput = "";
+            updateInputBoxes();
+        }
+
+        function backspace() {
+            userInput = userInput.slice(0, -1);
+            updateInputBoxes();
+        }
+
+        async function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function toggleInstructions() {
+            const instructions = document.querySelector('.instructions');
+            const button = document.querySelector('.instructions-button');
+            instructions.classList.toggle('expanded');
+            button.classList.toggle('collapsed');
+        }
+
+        async function startGame() {
+            document.getElementById('startButton').style.display = 'none';
+            document.getElementById('statsPanel').classList.remove('visible');
+            // Hide instructions when game starts
+            const instructions = document.querySelector('.instructions');
+            const button = document.querySelector('.instructions-button');
+            instructions.classList.remove('expanded');
+            button.classList.add('collapsed');
+            userInput = "";
+            originalNumber = generateUniqueNumber(level);
+
+            createBoxes(level, 'numberBoxes');
+            createBoxes(level, 'inputBoxes', true);
+
+            const boxes = document.querySelectorAll('.number-box');
+            for (let i = 0; i < originalNumber.length; i++) {
+                boxes[i].textContent = originalNumber[i];
+                await sleep(1000);
+                boxes[i].textContent = '';
+                await sleep(200);
+            }
+            startTime = Date.now();
+            document.getElementById('levelDisplay').textContent = level;
+        }
+
+        function calculateScore(timeElapsed, digitsCorrect, totalDigits) {
+            const timeWeight = Math.max(1, 10 - (timeElapsed / 1000));
+            const difficultyWeight = Math.pow(1.5, totalDigits - 2);
+            const accuracyWeight = digitsCorrect / totalDigits;
+            return Math.round((timeWeight * difficultyWeight * accuracyWeight * 100));
+        }
+
+        function findLongestCorrectSequence(correct, attempt) {
+            let maxLength = 0;
+            for (let i = 0; i < correct.length; i++) {
+                for (let j = i + 1; j <= correct.length; j++) {
+                    const sequence = correct.slice(i, j);
+                    if (attempt.includes(sequence)) {
+                        maxLength = Math.max(maxLength, sequence.length);
+                    }
+                }
+            }
+            return maxLength;
+        }
+
+        function checkAnswer() {
+            const timeElapsed = Date.now() - startTime;
+            const reversed = originalNumber.split('').reverse().join('');
+            const correctSequenceLength = findLongestCorrectSequence(reversed, userInput);
+            const score = calculateScore(timeElapsed, correctSequenceLength, level);
+
+            const result = {
+                timestamp: Date.now(),
+                level,
+                originalNumber,
+                userInput,
+                timeElapsed,
+                score,
+                correctSequenceLength
+            };
+
+            const state = isCoffeeState ? 'after' : 'before';
+            gameHistory[state].push(result);
+            localStorage.setItem('gameHistory', JSON.stringify(gameHistory));
+
+            const scoreFlash = document.getElementById('scoreFlash');
+            scoreFlash.textContent = `Score: ${score}`;
+            scoreFlash.style.display = 'block';
+            setTimeout(() => scoreFlash.style.display = 'none', 2000);
+
+            if (correctSequenceLength === level) {
+                level = Math.min(9, level + 1);
+            } else if (correctSequenceLength < level / 2) {
+                level = Math.max(3, level - 1);
+            }
+
+            updateStats();
+            const numberBoxes = document.getElementById('numberBoxes');
+            numberBoxes.innerHTML = '<button onclick="startGame()" id="startButton">Start</button>';
+            document.getElementById('levelDisplay').textContent = level;
+        }
+
+        function calculateStats(results) {
+            if (results.length === 0) return null;
+
+            // Group results by level
+            const byLevel = {};
+            results.forEach(result => {
+                if (!byLevel[result.level]) {
+                    byLevel[result.level] = [];
+                }
+                byLevel[result.level].push(result);
+            });
+
+            // Calculate stats for each level
+            const levelStats = {};
+            Object.entries(byLevel).forEach(([level, levelResults]) => {
+                const scores = levelResults.map(r => r.score);
+                const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+                const std = Math.sqrt(
+                    scores.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / scores.length
+                );
+
+                levelStats[level] = {
+                    average: Math.round(avg),
+                    stdDev: Math.round(std),
+                    max: Math.max(...scores),
+                    recentTrend: levelResults.slice(-3).map(r => r.score),
+                    totalGames: levelResults.length
+                };
+            });
+
+            return levelStats;
+        }
+
+        function updateStats() {
+            const beforeStats = calculateStats(gameHistory.before);
+            const afterStats = calculateStats(gameHistory.after);
+
+            let html = '<table>';
+
+            if (beforeStats || afterStats) {
+                // Get all unique levels
+                const allLevels = new Set([
+                    ...Object.keys(beforeStats || {}),
+                    ...Object.keys(afterStats || {})
+                ].sort((a, b) => Number(a) - Number(b)));
+
+                allLevels.forEach(level => {
+                    html += `<tr><td colspan="2"><strong>${level} Digit Numbers:</strong></td></tr>`;
+
+                    if (beforeStats && beforeStats[level]) {
+                        html += `
+                  <tr><td colspan="2"><em>Before Coffee:</em></td></tr>
+                  <tr><td>Average:</td><td>${beforeStats[level].average}</td></tr>
+                  <tr><td>Best:</td><td>${beforeStats[level].max}</td></tr>
+                  <tr><td>StdDev:</td><td>${beforeStats[level].stdDev}</td></tr>
+                  <tr><td>Games:</td><td>${beforeStats[level].totalGames}</td></tr>
+                `;
+                    }
+
+                    if (afterStats && afterStats[level]) {
+                        html += `
+                  <tr><td colspan="2"><em>After Coffee:</em></td></tr>
+                  <tr><td>Average:</td><td>${afterStats[level].average}</td></tr>
+                  <tr><td>Best:</td><td>${afterStats[level].max}</td></tr>
+                  <tr><td>StdDev:</td><td>${afterStats[level].stdDev}</td></tr>
+                  <tr><td>Games:</td><td>${afterStats[level].totalGames}</td></tr>
+                `;
+                    }
+
+                    if (beforeStats?.[level] && afterStats?.[level]) {
+                        const improvement = Math.round(
+                            ((afterStats[level].average - beforeStats[level].average) / beforeStats[level].average) * 100
+                        );
+                        html += `
+                  <tr><td colspan="2"><em>Coffee Impact:</em></td></tr>
+                  <tr><td>Change:</td><td>${improvement}%</td></tr>
+                `;
+                    }
+                    html += '<tr><td colspan="2"><hr></td></tr>';
+                });
+            }
+
+            html += '</table>';
+            document.getElementById('detailedStats').innerHTML = html;
+        }
+
+        function toggleStats() {
+            const panel = document.getElementById('statsPanel');
+            panel.classList.toggle('visible');
+            updateStats();
+        }
+
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear all game history?')) {
+                localStorage.removeItem('gameHistory');
+                gameHistory = {
+                    before: [],
+                    after: []
+                };
+                updateStats();
+            }
+        }
+
+        document.getElementById('beforeCoffee').addEventListener('click', () => {
+            isCoffeeState = false;
+            document.getElementById('beforeCoffee').classList.add('active');
+            document.getElementById('afterCoffee').classList.remove('active');
+            updateStats();
+        });
+
+        document.getElementById('afterCoffee').addEventListener('click', () => {
+            isCoffeeState = true;
+            document.getElementById('afterCoffee').classList.add('active');
+            document.getElementById('beforeCoffee').classList.remove('active');
+            updateStats();
+        });
+
+        // Initialize stats on load
+        updateStats();
+
+        // Add keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') {
+                addDigit(e.key);
+            } else if (e.key === 'Backspace') {
+                backspace();
+            } else if (e.key === 'Enter') {
+                if (userInput.length === level) {
+                    checkAnswer();
+                } else {
+                    startGame();
+                }
+            } else if (e.key === 'Escape') {
+                clearInput();
+            }
+        });
+    </script>
+
+    <button onclick="clearHistory()" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 20px;">
+        Clear History
+    </button>
+</body>
+</html>
